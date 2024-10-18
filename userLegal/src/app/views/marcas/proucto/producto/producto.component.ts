@@ -1,5 +1,4 @@
 import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import {  LoadingController } from '@ionic/angular';
 import { OverlayEventDetail } from '@ionic/core/components';
 import { FirestoreService } from '../../../../common/services/firestore.service';
 import { Producto } from '../../../../common/models/producto.model';
@@ -75,6 +74,8 @@ export class ProductosPage implements OnInit {
   selectedFile: File | null = null;
   searchTerm: string = '';
 
+  isLoading: boolean = false; // Indicador de carga
+
 
 
 
@@ -84,7 +85,6 @@ export class ProductosPage implements OnInit {
  constructor(
     private firestoreService: FirestoreService,
     private fb: FormBuilder,
-    private loadingController: LoadingController,
     private changeDetectorRef: ChangeDetectorRef
   ) {
     this.productoForm = this.fb.group({
@@ -206,79 +206,69 @@ getProductosPaginados(): Producto[] {
     this.imagenProducto = null;
   }
 
- async agregarOEditarProducto() {
-  if (this.productoForm.invalid) {
-    return;
-  }
-
-  const productoData = this.productoForm.value;
-
-  console.log('Descripción del producto:', this.productoForm.get('descripcion')!.value);
-
-  productoData.precioFinal = this.productoForm.get('precioFinal')!.value;
-
-  const loading = await this.loadingController.create({
-    message: 'Guardando...',
-  });
-  await loading.present();
-
-  try {
-    if (this.editMode && this.productoAEditar) {
-      productoData.id = this.productoAEditar.id;
-      await this.firestoreService.updateProducto(productoData, this.imagenProducto);
-    } else {
-      await this.firestoreService.addProducto(productoData, this.imagenProducto);
+async agregarOEditarProducto() {
+    if (this.productoForm.invalid) {
+      return;
     }
-    window.alert('Producto guardado con éxito.');
-  } catch (error) {
-    console.error('Error al guardar el producto:', error);
-    window.alert('Error al guardar el producto. Por favor, inténtalo de nuevo.');
-  } finally {
-    await loading.dismiss();
-    this.closeModal();
-    this.cargarProductos();
-  }
-}
 
+    this.isLoading = true; // Mostrar el spinner
 
-
-
-  async eliminarProducto(producto: Producto) {
-  if (!producto) {
-    console.error('El producto es null o undefined.');
-    return;
-  }
-
-  console.log('Producto a eliminar:', producto);
-
-  if (!producto.id) {
-    console.error('El id del producto es null o undefined.');
-    return;
-  }
-
-  const confirmacion = window.confirm(`¿Estás seguro de que quieres eliminar el producto "${producto.nombre}"? Esta acción no se puede deshacer.`);
-
-  if (confirmacion) {
-    const loading = await this.loadingController.create({
-      message: 'Eliminando...',
-    });
-    await loading.present();
+    const productoData = this.productoForm.value;
+    console.log('Descripción del producto:', this.productoForm.get('descripcion')!.value);
+    productoData.precioFinal = this.productoForm.get('precioFinal')!.value;
 
     try {
-      await this.firestoreService.deleteProducto(producto);
-      this.productos = this.productos.filter(p => p.id !== producto.id);
-      console.log(`Producto eliminado: ${producto.id}`);
-      window.alert('El producto se ha eliminado con éxito.');
-      this.cargarProductos();
+      if (this.editMode && this.productoAEditar) {
+        productoData.id = this.productoAEditar.id;
+        await this.firestoreService.updateProducto(productoData, this.imagenProducto);
+      } else {
+        await this.firestoreService.addProducto(productoData, this.imagenProducto);
+      }
+      window.alert('Producto guardado con éxito.');
     } catch (error) {
-      console.error('Error eliminando el producto:', error);
-      window.alert('Error al eliminar el producto. Por favor, inténtalo de nuevo.');
+      console.error('Error al guardar el producto:', error);
+      window.alert('Error al guardar el producto. Por favor, inténtalo de nuevo.');
     } finally {
-      await loading.dismiss();
-      this.changeDetectorRef.detectChanges();
+      this.isLoading = false; // Ocultar el spinner
+      this.closeModal();
+      this.cargarProductos();
     }
   }
-}
+
+  async eliminarProducto(producto: Producto) {
+    if (!producto) {
+      console.error('El producto es null o undefined.');
+      return;
+    }
+
+    console.log('Producto a eliminar:', producto);
+
+    if (!producto.id) {
+      console.error('El id del producto es null o undefined.');
+      return;
+    }
+
+    const confirmacion = window.confirm(`¿Estás seguro de que quieres eliminar el producto "${producto.nombre}"? Esta acción no se puede deshacer.`);
+
+    if (confirmacion) {
+      this.isLoading = true; // Mostrar el spinner
+
+      try {
+        await this.firestoreService.deleteProducto(producto);
+        this.productos = this.productos.filter(p => p.id !== producto.id);
+        console.log(`Producto eliminado: ${producto.id}`);
+        window.alert('El producto se ha eliminado con éxito.');
+        this.cargarProductos();
+      } catch (error) {
+        console.error('Error eliminando el producto:', error);
+        window.alert('Error al eliminar el producto. Por favor, inténtalo de nuevo.');
+      } finally {
+        this.isLoading = false; // Ocultar el spinner
+        this.changeDetectorRef.detectChanges();
+      }
+    }
+  }
+
 
 
   editarProducto(producto: Producto) {
@@ -317,3 +307,4 @@ filtrarProductos(event: any) {
 
 
 }
+
