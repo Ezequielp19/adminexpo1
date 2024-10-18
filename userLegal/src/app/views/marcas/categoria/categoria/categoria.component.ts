@@ -1,11 +1,16 @@
 import { ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import {   LoadingController } from '@ionic/angular';
 import { OverlayEventDetail } from '@ionic/core/components';
 import { FirestoreService } from '../../../../common/services/firestore.service';
 import { Categoria } from '../../../../common/models/categoria.model';
 
 import { FormsModule, FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+
+
+
+
+
+
 
 import {
   IonItem,
@@ -73,7 +78,7 @@ export class CategoriasPage implements OnInit {
   constructor(
     private firestoreService: FirestoreService,
 
-    private loadingController: LoadingController,
+
     private fb: FormBuilder,
     private changeDetectorRef: ChangeDetectorRef
   ) {
@@ -124,35 +129,61 @@ export class CategoriasPage implements OnInit {
     }
   }
 
- async agregarOEditarCategoria() {
-  if (this.categoriaForm.invalid) {
-    return;
-  }
-
-  const categoriaData = this.categoriaForm.value;
-
-  const loading = await this.loadingController.create({
-    message: 'Guardando...',
-  });
-  await loading.present();
-
-  try {
-    if (this.editMode && this.categoriaAEditar) {
-      categoriaData.id = this.categoriaAEditar.id;
-      await this.firestoreService.updateCategoria(categoriaData, this.imagenCategoria);
-    } else {
-      await this.firestoreService.addCategoria(categoriaData, this.imagenCategoria);
+async agregarOEditarCategoria() {
+    if (this.categoriaForm.invalid) {
+      return;
     }
-    window.alert('Categoría guardada con éxito.');
-  } catch (error) {
-    console.error('Error al guardar la categoría:', error);
-    window.alert('Error al guardar la categoría. Por favor, inténtalo de nuevo.');
-  } finally {
-    await loading.dismiss();
-    this.closeModal();
-    this.cargarCategorias();
+
+    const categoriaData = this.categoriaForm.value;
+
+    try {
+      if (this.editMode && this.categoriaAEditar) {
+        categoriaData.id = this.categoriaAEditar.id;
+        await this.firestoreService.updateCategoria(categoriaData, this.imagenCategoria);
+      } else {
+        await this.firestoreService.addCategoria(categoriaData, this.imagenCategoria);
+      }
+      window.alert('Categoría guardada con éxito.');
+    } catch (error) {
+      console.error('Error al guardar la categoría:', error);
+      window.alert('Error al guardar la categoría. Por favor, inténtalo de nuevo.');
+    } finally {
+      this.closeModal();
+      this.cargarCategorias();
+    }
   }
-}
+
+  async eliminarCategoria(categoria: Categoria) {
+    if (!categoria) {
+      console.error('La categoría es null o undefined.');
+      return;
+    }
+
+    console.log('Categoría a eliminar:', categoria);
+
+    if (!categoria.id) {
+      console.error('El id de la categoría es null o undefined.');
+      return;
+    }
+
+    const confirmacion = window.confirm(`¿Estás seguro de que quieres eliminar la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`);
+
+    if (confirmacion) {
+
+      try {
+        await this.firestoreService.deleteCategoria(categoria);
+        this.categorias = this.categorias.filter(c => c.id !== categoria.id);
+        console.log(`Categoría eliminada: ${categoria.id}`);
+        this.cargarCategorias();
+        window.alert('Categoría eliminada con éxito.');
+      } catch (error) {
+        console.error('Error eliminando la categoría:', error);
+        window.alert('Error al eliminar la categoría. Por favor, inténtalo de nuevo.');
+      } finally {
+        this.changeDetectorRef.detectChanges();
+      }
+    }
+  }
 
 
   openModal() {
@@ -166,48 +197,16 @@ export class CategoriasPage implements OnInit {
     this.imagenCategoria = null;
   }
 
- async eliminarCategoria(categoria: Categoria) {
-  if (!categoria) {
-    console.error('La categoría es null o undefined.');
-    return;
-  }
-
-  console.log('Categoría a eliminar:', categoria);
-
-  if (!categoria.id) {
-    console.error('El id de la categoría es null o undefined.');
-    return;
-  }
-
-  const confirmacion = window.confirm(`¿Estás seguro de que quieres eliminar la categoría "${categoria.nombre}"? Esta acción no se puede deshacer.`);
-
-  if (confirmacion) {
-    const loading = await this.loadingController.create({
-      message: 'Eliminando...',
-    });
-    await loading.present();
-
-    try {
-      await this.firestoreService.deleteCategoria(categoria);
-      this.categorias = this.categorias.filter(c => c.id !== categoria.id);
-      console.log(`Categoría eliminada: ${categoria.id}`);
-      this.cargarCategorias();
-      window.alert('Categoría eliminada con éxito.');
-    } catch (error) {
-      console.error('Error eliminando la categoría:', error);
-      window.alert('Error al eliminar la categoría. Por favor, inténtalo de nuevo.');
-    } finally {
-      await loading.dismiss();
-      this.changeDetectorRef.detectChanges();
-    }
-  }
-}
-
-
-
-
-
 
 
 
 }
+
+
+
+
+
+
+
+
+
