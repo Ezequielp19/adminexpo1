@@ -159,6 +159,33 @@ getProductosPaginados(): Producto[] {
   }
 
 
+
+async agregarProducto() {
+    if (this.productoForm.invalid) {
+      window.alert('Por favor, completa todos los campos requeridos.');
+      return;
+    }
+
+    this.isLoading = true; // Mostrar el spinner
+
+    const productoData = this.productoForm.value;
+    console.log('Descripción del producto:', this.productoForm.get('descripcion')!.value);
+    productoData.precioFinal = this.productoForm.get('precioFinal')!.value;
+
+    try {
+      await this.firestoreService.addProducto(productoData, this.imagenProducto);
+      window.alert('Producto guardado con éxito.');
+    } catch (error) {
+      console.error('Error al guardar el producto:', error);
+      window.alert('Error al guardar el producto. Por favor, inténtalo de nuevo.');
+    } finally {
+      this.isLoading = false; // Ocultar el spinner
+      this.closeModal();
+      this.cargarProductos();
+    }
+  }
+
+
   async cargarProductos() {
     this.productos = await this.firestoreService.getProductos();
     this.paginatedProductos = this.getProductosPaginados();
